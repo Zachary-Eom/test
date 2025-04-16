@@ -2,7 +2,7 @@ name: Weekly Commit Summary
 
 on:
   schedule:
-    - cron: '48 3 * * 3' # 매주 월요일 10:00 KST (UTC 1시)
+    - cron: '55 3 * * 1' # 매주 월요일 10:00 KST (UTC 기준 1시)
   workflow_dispatch:
 
 jobs:
@@ -27,20 +27,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          COMMITS=$(gh api repos/${{ github.repository }}/commits \
-            --paginate \
-            -q "[?commit.author.date>=\`${{ steps.daterange.outputs.start }}T00:00:00Z\` && commit.author.date<\`${{ steps.daterange.outputs.end }}T00:00:00Z\`].commit.message" \
+          START="${{ steps.daterange.outputs.start }}T00:00:00Z"
+          END="${{ steps.daterange.outputs.end }}T00:00:00Z"
+
+          echo "Fetching commits from $START to $END..."
+          COMMITS=$(gh api repos/${{ github.repository }}/commits --paginate)
+
+          MESSAGES=$(echo "$COMMITS" | jq -r --arg start "$START" --arg end "$END" \
+            '[.[] | select(.commit.author.date >= $start and .commit.author.date < $end) | .commit.message] | join("\n")'
           )
-          echo "COMMITS=$COMMITS" >> $GITHUB_OUTPUT
+
+          echo "messages<<EOF" >> $GITHUB_ENV
+          echo "$MESSAGES" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Summarize with OpenAI
         id: summary
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
-          MESSAGES=$(echo '${{ steps.commits.outputs.COMMITS }}' | jq -r '.[]' | paste -sd '\n' -)
-          echo "Messages: $MESSAGES"
-
+          echo "Summarizing..."
           SUMMARY=$(curl -s https://api.openai.com/v1/chat/completions \
             -H "Authorization: Bearer $OPENAI_API_KEY" \
             -H "Content-Type: application/json" \
@@ -48,7 +54,7 @@ jobs:
               "model": "gpt-3.5-turbo",
               "messages": [
                 {"role": "system", "content": "너는 개발자의 커밋 메시지를 요약해주는 도우미야."},
-                {"role": "user", "content": "지난 주의 커밋들을 요약해줘:\n'"$MESSAGES"'"}
+                {"role": "user", "content": "지난 주의 커밋들을 요약해줘:\n'"${{ env.messages }}"'"}
               ]
             }' | jq -r '.choices[0].message.content')
 
@@ -60,6 +66,7 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
+          echo "Sending summary to Slack..."
           curl -X POST -H 'Content-type: application/json' --data "{
-            \"text\": \"📚 *지난 주 커밋 요약입니다!*\n\n$SUMMARY\"
+            \"text\": \"📚 *지난 주 커밋 요약입니다!*\n\n${{ env.summary }}\"
           }" $SLACK_WEBHOOK_URL
