@@ -58,6 +58,9 @@ jobs:
               ]
             }' | jq -r '.choices[0].message.content')
 
+          echo "🧾 Summary result from OpenAI:"
+          echo "$SUMMARY"
+
           echo "summary<<EOF" >> $GITHUB_ENV
           echo "$SUMMARY" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
