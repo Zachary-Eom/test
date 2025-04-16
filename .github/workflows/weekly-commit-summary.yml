@@ -54,7 +54,7 @@ jobs:
               "model": "gpt-3.5-turbo",
               "messages": [
                 {"role": "system", "content": "너는 개발자의 커밋 메시지를 요약해주는 도우미야."},
-                {"role": "user", "content": "지난 주의 커밋들을 일자별로 한 줄 씩 요약해줘:\n'"${{ env.messages }}"'"}
+                {"role": "user", "content": "지난 주의 커밋들을 누가 어느 브랜치에서 어떤 내용을 작업했는지 일자별로 정리해줘:\n'"${{ env.messages }}"'"}
               ]
             }' | jq -r '.choices[0].message.content')
 
