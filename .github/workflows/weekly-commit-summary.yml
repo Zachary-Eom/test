@@ -2,7 +2,7 @@ name: Weekly Commit Summary
 
 on:
   schedule:
-    - cron: '33 4 * * *' # 매주 월요일 10:00 KST (UTC 기준 1시)
+    - cron: '25 6 * * *' # 매주 월요일 10:00 KST (UTC 기준 1시)
   workflow_dispatch:
 
 jobs:
@@ -67,9 +67,11 @@ jobs:
 
       - name: Send to Slack
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
         run: |
           echo "Sending summary to Slack..."
-          curl -X POST -H 'Content-type: application/json' --data "{
-            \"text\": \"📚 *지난 주 커밋 요약입니다!*\n\n${{ env.summary }}\"
-          }" $SLACK_WEBHOOK_URL
+          curl -X POST https://slack.com/api/chat.postMessage \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n --arg channel "C08N4F3FWH1" --arg text "📚 *테스트*\n\n${SUMMARY}" \
+              '{channel: $channel, text: $text}')"
