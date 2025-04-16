@@ -1,0 +1,41 @@
+name: Summarize commits on push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summarize commits with OpenAI and save to Notion
+        run: |
+          echo "Summarizing commits..."
+          COMMITS=$(echo '${{ toJson(github.event.commits) }}' | jq -r '.[].message' | paste -sd '\n' -)
+          
+          SUMMARY=$(curl -s https://api.openai.com/v1/chat/completions \
+            -H "Authorization: Bearer ${{ secrets.OPENAI_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "model": "gpt-3.5-turbo",
+              "messages": [
+                {"role": "system", "content": "너는 개발자의 커밋 메시지를 요약해주는 도우미야."},
+                {"role": "user", "content": "다음 커밋들을 요약해줘:\n'"$COMMITS"'"}
+              ]
+            }' | jq -r '.choices[0].message.content')
+
+          echo "Saving to Notion..."
+
+          curl -X POST "https://api.notion.com/v1/pages" \
+            -H "Authorization: Bearer ${{ secrets.NOTION_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "Notion-Version: 2022-06-28" \
+            -d '{
+              "parent": { "database_id": "'"${{ secrets.NOTION_DB_ID }}"'" },
+              "properties": {
+                "Date": { "date": { "start": "'"$(date -I)'" }},
+                "Author": { "title": [{ "text": { "content": "'"${{ github.actor }}"'" }}]},
+                "Summary": { "rich_text": [{ "text": { "content": "'"$SUMMARY"'" }}]}
+              }
+            }'
