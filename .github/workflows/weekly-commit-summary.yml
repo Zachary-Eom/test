@@ -73,5 +73,5 @@ jobs:
           curl -X POST https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "$(jq -n --arg channel "C08N4F3FWH1" --arg text "📚 *테스트*\n\n${SUMMARY}" \
+            -d "$(jq -n --arg channel "C08N4F3FWH1" --arg text "📚 *테스트*\n\n${{ env.summary }}" \
               '{channel: $channel, text: $text}')"
