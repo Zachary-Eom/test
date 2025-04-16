@@ -2,7 +2,7 @@ name: Weekly Commit Summary
 
 on:
   schedule:
-    - cron: '44 3 * * 3' # 매주 월요일 10:00 KST (UTC 1시)
+    - cron: '48 3 * * 3' # 매주 월요일 10:00 KST (UTC 1시)
   workflow_dispatch:
 
 jobs:
