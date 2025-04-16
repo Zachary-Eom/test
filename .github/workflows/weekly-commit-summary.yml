@@ -2,7 +2,7 @@ name: Weekly Commit Summary
 
 on:
   schedule:
-    - cron: '25 6 * * *' # 매주 월요일 10:00 KST (UTC 기준 1시)
+    - cron: '0 1 * * 1' # 매주 월요일 10:00 KST (UTC 기준 1시)
   workflow_dispatch:
 
 jobs:
@@ -54,7 +54,7 @@ jobs:
               "model": "gpt-3.5-turbo",
               "messages": [
                 {"role": "system", "content": "너는 개발자의 커밋 메시지를 요약해주는 도우미야."},
-                {"role": "user", "content": "지난 주의 커밋들을 누가 어느 브랜치에서 어떤 내용을 작업했는지 일자별로 정리해줘, 바로 본론만 전달해줘:\n'"${{ env.messages }}"'"}
+                {"role": "user", "content": "지난 주의 커밋들을 누가 어느 브랜치에서 어떤 내용을 작업했는지 일자별로 정리해줘, 바로 본론만 전달해줘, 강조 표시와 같은 것 없이 텍스트만 전달해줘:\n'"${{ env.messages }}"'"}
               ]
             }' | jq -r '.choices[0].message.content')
 
@@ -73,5 +73,27 @@ jobs:
           curl -X POST https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
             -H "Content-Type: application/json" \
-            -d "$(jq -n --arg channel "C08N4F3FWH1" --arg text "📚 *테스트*\n\n${{ env.summary }}" \
-              '{channel: $channel, text: $text}')"
+            -d "$(jq -n \
+              --arg channel "C08N4F3FWH1" \
+              --arg text "*📚 주간 커밋 요약*" \
+              --arg summary "${{ env.summary }}" \
+              '{
+                channel: $channel,
+                text: $text,
+                blocks: [
+                  {
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: $text
+                    }
+                  },
+                  {
+                    type: "section",
+                    text: {
+                      type: "mrkdwn",
+                      text: $summary
+                    }
+                  }
+                ]
+              }')"
